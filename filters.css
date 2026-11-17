@@ -1,0 +1,105 @@
+/* filters.css — Customizações para o Painel Cyberpunk */
+
+.filtros-painel {
+  border: 1px solid var(--cyan, #00f5ff);
+  background: var(--panel, #111111);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.filtros-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.filtros-titulo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: var(--cyan, #00f5ff);
+  letter-spacing: 0.1em;
+}
+
+.filtros-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.filtro-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold, #ffd700);
+}
+
+.filtro-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Estilização dos Inputs e Selects */
+.filtro-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border, #1a1a1a);
+  color: var(--text, #e8e8e8);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.95rem;
+  padding: 0.5rem;
+  outline: none;
+  transition: all 0.25s;
+  box-sizing: border-box;
+}
+
+.filtro-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow, rgba(0, 245, 255, 0.3));
+}
+
+/* Remove visual padrão do select e insere a seta personalizada estilizada */
+.filtro-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300f5ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+.filtro-select option {
+  background: var(--panel, #111111);
+  color: var(--text, #e8e8e8);
+}
+
+/* Botão de Limpar Filtros */
+.filtros-btn-limpar {
+  background: transparent;
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  color: var(--cyan);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.filtros-btn-limpar:hover {
+  background: rgba(0, 245, 255, 0.1);
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow, rgba(0, 245, 255, 0.5));
+}
