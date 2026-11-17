@@ -8,7 +8,7 @@
 
 **Sistema de controle de gastos pessoais com autenticação, dados na nuvem e balanço financeiro.**
 
-[🌐 Acessar o Sistema](https://kyon-s2.github.io/BootCampII-Intermediaria/)
+[🌐 Acessar o Sistema](https://kyon-s2.github.io/ControleFinanceiro/)
 
 </div>
 
@@ -18,8 +18,8 @@
 
 | Nome | GitHub |
 |------|--------|
-| Felipe Gabriel do Nascimento Rodrigues[GitHub](https://github.com/kyon-s2) | — |
-| Daniel Carlos Delfino dos Santos[GitHub](https://github.com/danieldelfino123)s | — |
+| Felipe Gabriel do Nascimento Rodrigues| — |
+| Daniel Carlos Delfino dos Santos| — |
 
 ---
 
@@ -63,8 +63,8 @@ O **Finance Control System** é uma conversão do projeto inicial que era CLI em
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/kyon-s2/BootCampII-Intermediaria.git
-cd BootCampII-Intermediaria
+git clone https://github.com/Kyon-S2/ControleFinanceiro.git
+cd ControleFinanceiro
 
 # 2. Instale as dependências
 npm install
@@ -187,23 +187,23 @@ A pipeline de CI roda automaticamente a cada push via **GitHub Actions**.
 ## 📁 Estrutura do Projeto
 
 ```
-BootCampII-Intermediaria/
+ControleFinanceiro/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml            # Pipeline de testes automáticos
-├── node_modules/             # Dependências (ignorado pelo git)
+│       └── ci.yml                        # Pipeline de testes automáticos
 ├── .gitignore
-├── app.js                    # Lógica principal e integração Supabase
-├── app.tests.js              # Testes automatizados (Jest)
-├── config.example.js         # Modelo de configuração (sem credenciais)
-├── favicon.ico               # Ícone do site
-├── filters.css               # Estilos do painel de filtros
-├── filters.js                # Lógica de filtro por categoria no relatório
-├── index.html                # Estrutura da aplicação
+├── app.js                                # Lógica principal e integração Supabase
+├── app.tests.js                          # Testes automatizados (Jest)
+├── config.example.js                     # Modelo de configuração (sem credenciais)
+├── favicon.ico                           # Ícone do site
+├── filters.css                           # Estilos do painel de filtros
+├── filters.js                            # Lógica de filtro por categoria no relatório
+├── index.html                            # Estrutura da aplicação
+├── novos_testes_para_app.tests.js        # Testes extras (filtros avançados e busca)
 ├── package.json
 ├── package-lock.json
 ├── README.md
-└── style.css                 # Estilização principal (tema cyberpunk)
+└── style.css                             # Estilização principal (tema cyberpunk)
 ```
 
 ---
@@ -225,6 +225,6 @@ Este projeto foi originalmente desenvolvido em **Python (CLI)** durante o BootCa
 <div align="center">
 
 Desenvolvido durante o **BootCamp II — 2026**
-Uso de Inteligência Artificial (Clade Code, Gemini, etc)
+Uso de Inteligência Artificial (Claude Code, Gemini, etc)
 
 </div>
