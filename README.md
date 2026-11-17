@@ -18,11 +18,8 @@
 
 | Nome | GitHub |
 |------|--------|
-| Felipe Gabriel do Nascimento Rodrigues | — |
-| Lucas Palácio Mello | — |
-| Letícia Vitória Cardoso Cunha | — |
-| Guilherme Brito Andrade | — |
-| Daniel Carlos Delfino dos Santos | — |
+| Felipe Gabriel do Nascimento Rodrigues[GitHub](https://github.com/kyon-s2) | — |
+| Daniel Carlos Delfino dos Santos[GitHub](https://github.com/danieldelfino123)s | — |
 
 ---
 
