@@ -1,4 +1,4 @@
-# ⬡ Finance Control System
+# ⬡ Sistema de controle financeiro!
 
 <div align="center">
 
@@ -25,7 +25,7 @@
 
 ## 📌 Sobre o Projeto
 
-O **Finance Control System** é uma conversão do projeto inicial que era CLI em Python, convertido para GUI em HTML, CSS e JavaScript com uso do Claude Code. O sistema permite controlar gastos e ganhos pessoais com autenticação de usuários, persistência de dados na nuvem e isolamento por conta.
+O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais com autenticação de usuários, persistência de dados na nuvem e isolamento por conta.
 
 ## ✨ Funcionalidades
 
@@ -220,11 +220,13 @@ Este projeto foi originalmente desenvolvido em **Python (CLI)** durante o BootCa
 - Filtro de relatório por categoria
 - Testes automatizados e pipeline de CI/CD
 
+Agora o projeto está sendo utilizado como projeto final na disciplina de **Backend**.
+
 ---
 
 <div align="center">
 
-Desenvolvido durante o **BootCamp II — 2026**
-Uso de Inteligência Artificial (Claude Code, Gemini, etc)
+Desenvolvido durante o **BootCamp II — 2026** e aprimorado para **Backend - 2026**
+Uso de Inteligência Artificial (Claude Code, Gemini, Antigravity)
 
 </div>
