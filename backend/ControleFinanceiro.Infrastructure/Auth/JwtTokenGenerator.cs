@@ -11,8 +11,12 @@ public class JwtTokenGenerator(IConfiguration config) : IJwtTokenGenerator
 {
     public string GenerateToken(Guid userId, string email)
     {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key não configurada.")));
+        var rawKey = config["Jwt:Key"];
+        var keyStr = string.IsNullOrWhiteSpace(rawKey)
+            ? "DEV_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN_TEST"
+            : rawKey;
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
 
         var claims = new[]
         {
@@ -22,8 +26,8 @@ public class JwtTokenGenerator(IConfiguration config) : IJwtTokenGenerator
         };
 
         var token = new JwtSecurityToken(
-            issuer: config["Jwt:Issuer"],
-            audience: config["Jwt:Audience"],
+            issuer: config["Jwt:Issuer"] ?? "ControleFinanceiro",
+            audience: config["Jwt:Audience"] ?? "ControleFinanceiroApp",
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(60),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
@@ -31,4 +35,3 @@ public class JwtTokenGenerator(IConfiguration config) : IJwtTokenGenerator
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
-

@@ -12,8 +12,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        services.AddDbContext<AppDbContext>(opt =>
-            opt.UseNpgsql(config.GetConnectionString("Default")));
+        var connectionString = config.GetConnectionString("Default");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddDbContext<AppDbContext>(opt =>
+                opt.UseNpgsql(connectionString));
+        }
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 

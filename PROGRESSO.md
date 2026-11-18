@@ -7,8 +7,9 @@
 ## ✅ Fase 3 — Regras de negócio e CRUDs (concluída)
 - CRUDs de /api/categorias, /api/gastos, /api/ganhos, /api/limite e /api/resumo.
 ## ✅ Fase 4 — Middleware, Swagger e CORS (concluída)
-- Middleware RFC 7807 (ProblemDetails): 404, 422, 409, 401 e 500 sem stack trace.
-- Swagger UI com Bearer (Authorize), XML comments, ProducesResponseType e exemplos de auth.
-- CORS configurado com origens permitidas (localhost:5500 e GitHub Pages).
+- Middleware RFC 7807 (ProblemDetails), Swagger com Bearer/exemplos, CORS config.
+## ✅ Fase 5 — Testes xUnit e CI (concluída)
+- 27 testes xUnit reais: EmailNormalizer, regras, resumo/statusLimite e WebApplicationFactory.
+- CI GitHub Actions migrada para dotnet test; remoção do Jest e arquivos JS legados.
 
-## ⬜ Fase 5 — Adaptar frontend (app.js)
+## ⬜ Fase 6 — Adaptar frontend (app.js)

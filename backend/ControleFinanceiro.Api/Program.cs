@@ -78,7 +78,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "DEV_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN_TEST";
+var rawJwtKey = builder.Configuration["Jwt:Key"];
+var jwtKey = string.IsNullOrWhiteSpace(rawJwtKey)
+    ? "DEV_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN_TEST"
+    : rawJwtKey;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ControleFinanceiro";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ControleFinanceiroApp";
 
@@ -153,3 +156,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+public partial class Program { }
