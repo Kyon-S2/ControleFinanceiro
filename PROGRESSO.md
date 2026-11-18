@@ -1,16 +1,14 @@
 # PROGRESSO — ControleFinanceiro Backend
 
-## ✅ Fase 1 — Estrutura do backend .NET (concluída)
-- Solution Clean Architecture: Domain → Application → Infrastructure → Api
-- Entidades: Usuario, Gasto, Ganho (nomes PT, campos mapeados do frontend)
-- Repositories + Services + DTOs com interfaces na Application
-- Controllers: AuthController (login/registro), GastosController (CRUD), GanhosController (CR+D)
-- JWT auth (BCrypt hash), CORS, Swagger UI, EF Core + Npgsql
-- Migration inicial gerada. docker-compose.yml com PostgreSQL 17
-- .env.example com placeholders; .gitignore exclui .env, bin, obj
-- **Build OK — 0 erros, 0 avisos**
+## ✅ Fase 1 — Solution, entidades e banco (concluída)
+- Solution Clean Architecture (5 projetos), EF Core, migrations, docker PostgreSQL.
+## ✅ Fase 2 — Autenticação e Antiabuso (concluída)
+- Register, login, google, rate limit por IP, regras antiabuso de email e BCrypt.
+## ✅ Fase 3 — Regras de negócio e CRUDs (concluída)
+- CRUDs de /api/categorias, /api/gastos, /api/ganhos, /api/limite e /api/resumo.
+## ✅ Fase 4 — Middleware, Swagger e CORS (concluída)
+- Middleware RFC 7807 (ProblemDetails): 404, 422, 409, 401 e 500 sem stack trace.
+- Swagger UI com Bearer (Authorize), XML comments, ProducesResponseType e exemplos de auth.
+- CORS configurado com origens permitidas (localhost:5500 e GitHub Pages).
 
-## ⬜ Fase 2 — Adaptar frontend (app.js) para consumir a API .NET
-## ⬜ Fase 3 — Google Auth (login social)
-## ⬜ Fase 4 — Testes (xUnit)
-
+## ⬜ Fase 5 — Adaptar frontend (app.js)

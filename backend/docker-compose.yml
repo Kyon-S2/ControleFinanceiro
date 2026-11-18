@@ -1,12 +1,9 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:16-alpine
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_DB: controle_financeiro
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
 

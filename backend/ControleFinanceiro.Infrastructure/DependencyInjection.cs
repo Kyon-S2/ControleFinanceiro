@@ -1,11 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ControleFinanceiro.Application.Interfaces;
 using ControleFinanceiro.Application.Services;
-using ControleFinanceiro.Domain.Interfaces;
 using ControleFinanceiro.Infrastructure.Auth;
 using ControleFinanceiro.Infrastructure.Data;
-using ControleFinanceiro.Infrastructure.Repositories;
 
 namespace ControleFinanceiro.Infrastructure;
 
@@ -16,16 +15,18 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(opt =>
             opt.UseNpgsql(config.GetConnectionString("Default")));
 
-        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-        services.AddScoped<IGastoRepository, GastoRepository>();
-        services.AddScoped<IGanhoRepository, GanhoRepository>();
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
-        services.AddSingleton<JwtService>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IGoogleAuthValidator, GoogleAuthValidator>();
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IGastoService, GastoServiceImpl>();
-        services.AddScoped<IGanhoService, GanhoServiceImpl>();
+
+        services.AddScoped<ICategoriaService, CategoriaService>();
+        services.AddScoped<IGastoService, GastoService>();
+        services.AddScoped<IGanhoService, GanhoService>();
+        services.AddScoped<ILimiteService, LimiteService>();
+        services.AddScoped<IResumoService, ResumoService>();
 
         return services;
     }
 }
-

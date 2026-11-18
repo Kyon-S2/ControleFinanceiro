@@ -1,53 +1,93 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ControleFinanceiro.Api.Extensions;
 using ControleFinanceiro.Application.DTOs;
-using ControleFinanceiro.Application.Services;
+using ControleFinanceiro.Application.Interfaces;
 
 namespace ControleFinanceiro.Api.Controllers;
 
-[ApiController, Route("api/[controller]"), Authorize]
+/// <summary>
+/// Gerenciamento de despesas e gastos do usuário.
+/// </summary>
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
 public class GastosController(IGastoService service) : ControllerBase
 {
-    private int UsuarioId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
+    /// <summary>
+    /// Lista os gastos do usuário com filtros opcionais.
+    /// </summary>
+    /// <param name="nome">Filtro por nome</param>
+    /// <param name="categoriaId">Filtro por ID da categoria</param>
+    /// <param name="mes">Filtro por mês no formato yyyy-MM</param>
     [HttpGet]
-    public async Task<IActionResult> Get()
-        => Ok(await service.ObterTodosAsync(UsuarioId));
+    [ProducesResponseType(typeof(List<GastoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? nome,
+        [FromQuery] int? categoriaId,
+        [FromQuery] string? mes)
+    {
+        var list = await service.ObterTodosAsync(User.GetUsuarioId(), nome, categoriaId, mes);
+        return Ok(list);
+    }
 
+    /// <summary>
+    /// Obtém os detalhes de um gasto pelo ID.
+    /// </summary>
+    /// <param name="id">ID do gasto</param>
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(GastoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var gasto = await service.ObterPorIdAsync(User.GetUsuarioId(), id);
+        return Ok(gasto);
+    }
+
+    /// <summary>
+    /// Cadastra um novo gasto para o usuário logado.
+    /// </summary>
+    /// <param name="request">Dados do gasto</param>
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] GastoRequest request)
+    [ProducesResponseType(typeof(GastoResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Create([FromBody] GastoRequest request)
     {
-        var result = await service.CriarAsync(UsuarioId, request);
-        return Created($"api/gastos/{result.Id}", result);
+        var criado = await service.CriarAsync(User.GetUsuarioId(), request);
+        return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
     }
 
-    [HttpPatch("{id}")]
-    public async Task<IActionResult> Patch(int id, [FromBody] GastoRequest request)
+    /// <summary>
+    /// Atualiza um gasto existente do usuário logado.
+    /// </summary>
+    /// <param name="id">ID do gasto</param>
+    /// <param name="request">Novos dados do gasto</param>
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(GastoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Update(int id, [FromBody] GastoRequest request)
     {
-        try
-        {
-            var result = await service.AtualizarAsync(UsuarioId, id, request);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        var atualizado = await service.AtualizarAsync(User.GetUsuarioId(), id, request);
+        return Ok(atualizado);
     }
 
-    [HttpDelete("{id}")]
+    /// <summary>
+    /// Remove um gasto do usuário logado.
+    /// </summary>
+    /// <param name="id">ID do gasto</param>
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        try
-        {
-            await service.RemoverAsync(UsuarioId, id);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        await service.RemoverAsync(User.GetUsuarioId(), id);
+        return NoContent();
     }
 }
-

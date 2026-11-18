@@ -1,43 +1,92 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using ControleFinanceiro.Application.DTOs;
-using ControleFinanceiro.Application.Services;
+using ControleFinanceiro.Application.Interfaces;
 
 namespace ControleFinanceiro.Api.Controllers;
 
-[ApiController, Route("api/[controller]")]
-public class AuthController(IAuthService auth) : ControllerBase
+/// <summary>
+/// Endpoints para cadastro e autenticação de usuários.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController(IAuthService authService) : ControllerBase
 {
+    /// <summary>
+    /// Cadastra um novo usuário com e-mail e senha.
+    /// </summary>
+    /// <remarks>
+    /// Exemplo de requisição:
+    ///
+    ///     POST /api/auth/register
+    ///     {
+    ///        "email": "usuario@exemplo.com",
+    ///        "senha": "SenhaForte123"
+    ///     }
+    ///
+    /// </remarks>
+    /// <param name="request">Credenciais de cadastro</param>
+    /// <returns>Token JWT de acesso</returns>
+    [HttpPost("register")]
+    [EnableRateLimiting("register")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        var result = await authService.RegisterAsync(request);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>
+    /// Autentica o usuário utilizando e-mail e senha.
+    /// </summary>
+    /// <remarks>
+    /// Exemplo de requisição:
+    ///
+    ///     POST /api/auth/login
+    ///     {
+    ///        "email": "usuario@exemplo.com",
+    ///        "senha": "SenhaForte123"
+    ///     }
+    ///
+    /// </remarks>
+    /// <param name="request">Credenciais de login</param>
+    /// <returns>Token JWT de acesso</returns>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        try
-        {
-            var result = await auth.LoginAsync(request);
-            return Ok(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var result = await authService.LoginAsync(request);
+        return Ok(result);
     }
 
-    [HttpPost("registro")]
-    public async Task<IActionResult> Registro([FromBody] RegistroRequest request)
+    /// <summary>
+    /// Autentica ou cadastra o usuário através do token Google OAuth.
+    /// </summary>
+    /// <remarks>
+    /// Exemplo de requisição:
+    ///
+    ///     POST /api/auth/google
+    ///     {
+    ///        "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+    ///     }
+    ///
+    /// </remarks>
+    /// <param name="request">Token JWT do Google</param>
+    /// <returns>Token JWT de acesso</returns>
+    [HttpPost("google")]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Google([FromBody] GoogleAuthRequest request)
     {
-        try
-        {
-            var result = await auth.RegistrarAsync(request);
-            return Created("", result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        var result = await authService.GoogleAsync(request);
+        return Ok(result);
     }
-
-    [Authorize, HttpPost("logout")]
-    public IActionResult Logout() => NoContent();
 }
-

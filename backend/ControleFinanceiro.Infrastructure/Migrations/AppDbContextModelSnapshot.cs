@@ -22,6 +22,29 @@ namespace ControleFinanceiro.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Categoria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Categorias");
+                });
+
             modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Ganho", b =>
                 {
                     b.Property<int>("Id")
@@ -30,15 +53,14 @@ namespace ControleFinanceiro.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Classe")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<int>("CategoriaId")
+                        .HasColumnType("integer");
 
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date");
 
                     b.Property<bool>("Fixo")
                         .HasColumnType("boolean");
@@ -48,13 +70,16 @@ namespace ControleFinanceiro.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Valor")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
 
                     b.HasIndex("UsuarioId");
 
@@ -69,41 +94,64 @@ namespace ControleFinanceiro.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Classe")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<int>("CategoriaId")
+                        .HasColumnType("integer");
 
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Valor")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
 
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Gastos");
                 });
 
-            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Usuario", b =>
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.LimiteMensal", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId")
+                        .IsUnique();
+
+                    b.ToTable("LimitesMensais");
+                });
+
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Usuario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("timestamp with time zone");
@@ -113,45 +161,107 @@ namespace ControleFinanceiro.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("SenhaHash")
+                    b.Property<string>("EmailNormalizado")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SenhaHash")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("EmailNormalizado")
                         .IsUnique();
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasFilter("\"GoogleSubject\" IS NOT NULL");
 
                     b.ToTable("Usuarios");
                 });
 
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Categoria", b =>
+                {
+                    b.HasOne("ControleFinanceiro.Domain.Entities.Usuario", "Usuario")
+                        .WithMany("Categorias")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Ganho", b =>
                 {
+                    b.HasOne("ControleFinanceiro.Domain.Entities.Categoria", "Categoria")
+                        .WithMany("Ganhos")
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ControleFinanceiro.Domain.Entities.Usuario", "Usuario")
                         .WithMany("Ganhos")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Categoria");
+
                     b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Gasto", b =>
                 {
+                    b.HasOne("ControleFinanceiro.Domain.Entities.Categoria", "Categoria")
+                        .WithMany("Gastos")
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ControleFinanceiro.Domain.Entities.Usuario", "Usuario")
                         .WithMany("Gastos")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Categoria");
+
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Usuario", b =>
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.LimiteMensal", b =>
+                {
+                    b.HasOne("ControleFinanceiro.Domain.Entities.Usuario", "Usuario")
+                        .WithOne("LimiteMensal")
+                        .HasForeignKey("ControleFinanceiro.Domain.Entities.LimiteMensal", "UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Categoria", b =>
                 {
                     b.Navigation("Ganhos");
 
                     b.Navigation("Gastos");
+                });
+
+            modelBuilder.Entity("ControleFinanceiro.Domain.Entities.Usuario", b =>
+                {
+                    b.Navigation("Categorias");
+
+                    b.Navigation("Ganhos");
+
+                    b.Navigation("Gastos");
+
+                    b.Navigation("LimiteMensal");
                 });
 #pragma warning restore 612, 618
         }
