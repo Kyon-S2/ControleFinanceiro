@@ -1,15 +1,10 @@
-# PROGRESSO — ControleFinanceiro Backend
+# PROGRESSO — ControleFinanceiro
 
-## ✅ Fase 1 — Solution, entidades e banco (concluída)
-- Solution Clean Architecture (5 projetos), EF Core, migrations, docker PostgreSQL.
-## ✅ Fase 2 — Autenticação e Antiabuso (concluída)
-- Register, login, google, rate limit por IP, regras antiabuso de email e BCrypt.
-## ✅ Fase 3 — Regras de negócio e CRUDs (concluída)
-- CRUDs de /api/categorias, /api/gastos, /api/ganhos, /api/limite e /api/resumo.
-## ✅ Fase 4 — Middleware, Swagger e CORS (concluída)
-- Middleware RFC 7807 (ProblemDetails), Swagger com Bearer/exemplos, CORS config.
-## ✅ Fase 5 — Testes xUnit e CI (concluída)
-- 27 testes xUnit reais: EmailNormalizer, regras, resumo/statusLimite e WebApplicationFactory.
-- CI GitHub Actions migrada para dotnet test; remoção do Jest e arquivos JS legados.
+- [x] Fase 1: Solution Clean Architecture, entidades, EF Core e Docker PostgreSQL.
+- [x] Fase 2: Autenticação JWT, BCrypt, Google e proteção antiabuso/rate limiting.
+- [x] Fase 3: Regras de negócio e CRUDs (/gastos, /ganhos, /categorias, /limite, /resumo).
+- [x] Fase 4: Middleware RFC 7807 (ProblemDetails), Swagger com Bearer e CORS.
+- [x] Fase 5: 27 testes xUnit (regras, domain, integração WebAppFactory) e CI.
+- [x] Fase 6: Frontend migrado (api.js, remoção do Supabase, Google Identity, CRUD ganho/gasto).
 
-## ⬜ Fase 6 — Adaptar frontend (app.js)
+Todas as fases do projeto foram concluídas com sucesso.

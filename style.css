@@ -1108,3 +1108,31 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   z-index: 2;
   pointer-events: auto;
 }
+
+
+/* ─── Botão do Google ──────── */
+.google-auth-separator {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0 12px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 1px;
+}
+.google-auth-separator::before,
+.google-auth-separator::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+}
+.google-auth-separator span {
+  padding: 0 10px;
+}
+.google-btn-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+  min-height: 40px;
+}

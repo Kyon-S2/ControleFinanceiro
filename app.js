@@ -1,29 +1,17 @@
 /* =====================================================
    FINANCE CONTROL SYSTEM — app.js
-   Auth + Storage: Supabase
+   Auth + Storage: API REST .NET
    ===================================================== */
 
 // ─── 1. CONFIGURAÇÕES E ESTADO GLOBAL ─────────────────
-const SUPABASE_URL = 'https://dbljvtkfsemexvyyotjl.supabase.co';
-const SUPABASE_ANON = 'sb_publishable_G34ZFZbMO8faTziAk11sPw_knlEyQtw';
-const TABELA = 'gastos';
-
-let tokenSessao = null;
 let historico = [];
 let historicoGanhos = [];
+let categorias = [];
 let idRemover = null;
 let idRemoverGanho = null;
 let idEditar = null;
+let idEditarGanho = null;
 let limiteMensal = 0;
-
-const headersBase = {
-  'Content-Type': 'application/json',
-  'apikey': SUPABASE_ANON,
-};
-
-function headersAuth() {
-  return { ...headersBase, 'Authorization': `Bearer ${tokenSessao}` };
-}
 
 // ─── 2. AUTENTICAÇÃO E SESSÃO ─────────────────────────
 function trocarAba(aba, btn) {
@@ -50,13 +38,10 @@ async function fazerLogin() {
 
   setBloqueadoAuth(true);
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST', headers: headersBase, body: JSON.stringify({ email, password: senha }),
-    });
-    const dados = await res.json();
-    if (!res.ok) throw new Error(dados.error_description || dados.msg || 'E-mail ou senha incorretos.');
-    tokenSessao = dados.access_token;
-    entrarNoApp(dados.user.email);
+    const dados = await API.post('/api/auth/login', { email, senha });
+    API.setToken(dados.token);
+    API.setEmail(email);
+    await entrarNoApp(email);
   } catch (err) {
     setError('err-login-geral', err.message || 'Erro de conexão.');
   } finally {
@@ -71,26 +56,16 @@ async function fazerCadastro() {
 
   let valido = true;
   if (!email) { setError('err-reg-email', 'Informe um e-mail.'); valido = false; }
-  if (senha.length < 6) { setError('err-reg-senha', 'Mínimo 6 caracteres.'); valido = false; }
+  if (senha.length < 8) { setError('err-reg-senha', 'Mínimo 8 caracteres.'); valido = false; }
   if (senha !== confirma) { setError('err-reg-confirma', 'As senhas não coincidem.'); valido = false; }
   if (!valido) return;
 
   setBloqueadoAuth(true);
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: 'POST', headers: headersBase, body: JSON.stringify({ email, password: senha }),
-    });
-    const dados = await res.json();
-    if (!res.ok) throw new Error(dados.error_description || dados.msg || 'Erro ao criar conta.');
-
-    if (dados.access_token) {
-      tokenSessao = dados.access_token;
-      entrarNoApp(dados.user.email);
-    } else {
-      const msgGeral = document.getElementById('err-reg-geral');
-      msgGeral.style.color = 'var(--success)';
-      msgGeral.textContent = '✔ Conta criada! Verifique seu e-mail para confirmar.';
-    }
+    const dados = await API.post('/api/auth/register', { email, senha });
+    API.setToken(dados.token);
+    API.setEmail(email);
+    await entrarNoApp(email);
   } catch (err) {
     setError('err-reg-geral', err.message || 'Erro de conexão.');
   } finally {
@@ -98,90 +73,203 @@ async function fazerCadastro() {
   }
 }
 
-async function fazerLogout() {
-  try {
-    await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: 'POST', headers: headersAuth() });
-  } catch { /* ignora */ }
+async function fazerLogout(silencioso = false) {
+  API.setToken(null);
+  API.setEmail(null);
+  historico = [];
+  historicoGanhos = [];
+  categorias = [];
+  idRemover = null;
+  idRemoverGanho = null;
+  idEditar = null;
+  idEditarGanho = null;
+  limiteMensal = 0;
 
-  tokenSessao = null; historico = []; historicoGanhos = [];
   document.getElementById('tela-app').style.display = 'none';
   document.getElementById('tela-auth').style.display = 'flex';
-  ['login-email', 'login-senha'].forEach(id => document.getElementById(id).value = '');
+  ['login-email', 'login-senha', 'reg-email', 'reg-senha', 'reg-confirma'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  limparErrosAuth();
+  if (silencioso) {
+    showToast('Sessão encerrada.', 'danger');
+  }
 }
 
 async function entrarNoApp(email) {
   document.getElementById('tela-auth').style.display = 'none';
   document.getElementById('tela-app').style.display = 'block';
   document.getElementById('user-email-display').textContent = email;
-  carregarLimiteSalvo();
 
   ['stat-total', 'stat-max'].forEach(id => document.getElementById(id).textContent = 'R$ ...');
   document.getElementById('stat-count').textContent = '...';
 
+  await carregarCategorias();
+  await carregarLimiteSalvo();
+
   const resultados = await Promise.allSettled([dbBuscarTodos(), dbBuscarGanhos()]);
-  historico      = (resultados[0].status === 'fulfilled' && Array.isArray(resultados[0].value)) ? resultados[0].value.filter(g => g && g.id != null) : [];
-  historicoGanhos = (resultados[1].status === 'fulfilled' && Array.isArray(resultados[1].value)) ? resultados[1].value.filter(g => g && g.id != null) : [];
+  historico       = (resultados[0].status === 'fulfilled' && Array.isArray(resultados[0].value)) ? resultados[0].value : [];
+  historicoGanhos = (resultados[1].status === 'fulfilled' && Array.isArray(resultados[1].value)) ? resultados[1].value : [];
   if (resultados.some(r => r.status === 'rejected')) showToast('Aviso: alguns dados não carregaram.', 'danger');
   atualizarStats();
 }
 
-// ─── 3. BANCO DE DADOS (SUPABASE) ─────────────────────
+// ─── 3. CATEGORIAS ────────────────────────────────────
+async function carregarCategorias() {
+  try {
+    let list = await API.get('/api/categorias');
+    if (!list || list.length === 0) {
+      const padroes = ['Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Moradia', 'Educação', 'Outros'];
+      for (const p of padroes) {
+        try { await API.post('/api/categorias', { nome: p }); } catch {}
+      }
+      list = await API.get('/api/categorias');
+    }
+    categorias = list || [];
+    preencherSelectsCategoria();
+  } catch (err) {
+    console.error('Erro ao carregar categorias:', err);
+  }
+}
+
+function preencherSelectsCategoria() {
+  const selectIds = ['inp-classe', 'edit-classe', 'ganho-classe', 'edit-ganho-classe', 'filtro-categoria'];
+  selectIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const isFiltro = (id === 'filtro-categoria');
+    const valorAtual = el.value;
+    el.innerHTML = isFiltro
+      ? '<option value="">Todas as Categorias</option>'
+      : '<option value="" disabled selected>Selecione uma categoria...</option>';
+
+    categorias.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = isFiltro ? c.nome : c.id;
+      opt.textContent = c.nome;
+      el.appendChild(opt);
+    });
+
+    if (valorAtual) {
+      el.value = valorAtual;
+    }
+  });
+}
+
+// ─── 4. BANCO DE DADOS (API REST) ─────────────────────
+function formatarDataExibicao(isoStr) {
+  if (!isoStr) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(isoStr)) return isoStr;
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+  return isoStr;
+}
+
+function formatarDataIso(dataStr) {
+  if (!dataStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) return dataStr;
+  const parts = dataStr.split('/');
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return dataStr;
+}
+
 async function dbBuscarTodos() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA}?select=*&order=id.asc`, { headers: headersAuth() });
-  if (!res.ok) throw new Error('Erro ao buscar gastos.');
-  return res.json();
+  const list = await API.get('/api/gastos');
+  return (list || []).map(g => ({
+    id: g.id,
+    nome: g.nome,
+    valor: g.valor,
+    classe: g.categoriaNome || '',
+    categoriaId: g.categoriaId,
+    data: formatarDataExibicao(g.data),
+    dataIso: g.data
+  }));
 }
 
 async function dbInserir(gasto) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA}`, {
-    method: 'POST', headers: { ...headersAuth(), 'Prefer': 'return=representation' }, body: JSON.stringify(gasto),
-  });
-  if (!res.ok) throw new Error('Erro ao cadastrar gasto.');
-  const dados = await res.json();
-  return dados[0];
+  const res = await API.post('/api/gastos', gasto);
+  return {
+    id: res.id,
+    nome: res.nome,
+    valor: res.valor,
+    classe: res.categoriaNome || '',
+    categoriaId: res.categoriaId,
+    data: formatarDataExibicao(res.data),
+    dataIso: res.data
+  };
 }
 
 async function dbRemover(id) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA}?id=eq.${id}`, { method: 'DELETE', headers: headersAuth() });
-  if (!res.ok) throw new Error('Erro ao remover gasto.');
+  await API.delete('/api/gastos/' + id);
 }
 
 async function dbAtualizar(id, dados) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA}?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: { ...headersAuth(), 'Prefer': 'return=representation' },
-    body: JSON.stringify(dados),
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    console.error('dbAtualizar falhou:', res.status, msg);
-    throw new Error('Erro ao atualizar gasto.');
-  }
-  const resultado = await res.json();
-  return resultado[0];
+  const res = await API.put('/api/gastos/' + id, dados);
+  return {
+    id: res.id,
+    nome: res.nome,
+    valor: res.valor,
+    classe: res.categoriaNome || '',
+    categoriaId: res.categoriaId,
+    data: formatarDataExibicao(res.data),
+    dataIso: res.data
+  };
 }
 
 async function dbBuscarGanhos() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/ganhos?select=*&order=id.asc`, { headers: headersAuth() });
-  if (!res.ok) throw new Error('Erro ao buscar ganhos.');
-  return res.json();
+  const list = await API.get('/api/ganhos');
+  return (list || []).map(g => ({
+    id: g.id,
+    nome: g.nome,
+    valor: g.valor,
+    classe: g.categoriaNome || '',
+    categoriaId: g.categoriaId,
+    fixo: g.fixo,
+    data: formatarDataExibicao(g.data),
+    dataIso: g.data
+  }));
 }
 
 async function dbInserirGanho(ganho) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/ganhos`, {
-    method: 'POST', headers: { ...headersAuth(), 'Prefer': 'return=representation' }, body: JSON.stringify(ganho),
-  });
-  if (!res.ok) throw new Error('Erro ao cadastrar ganho.');
-  const dados = await res.json();
-  return dados[0];
+  const res = await API.post('/api/ganhos', ganho);
+  return {
+    id: res.id,
+    nome: res.nome,
+    valor: res.valor,
+    classe: res.categoriaNome || '',
+    categoriaId: res.categoriaId,
+    fixo: res.fixo,
+    data: formatarDataExibicao(res.data),
+    dataIso: res.data
+  };
 }
 
 async function dbRemoverGanho(id) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/ganhos?id=eq.${id}`, { method: 'DELETE', headers: headersAuth() });
-  if (!res.ok) throw new Error('Erro ao remover ganho.');
+  await API.delete('/api/ganhos/' + id);
 }
 
-// ─── 4. LÓGICA DE GASTOS E GANHOS ─────────────────────
+async function dbAtualizarGanho(id, dados) {
+  const res = await API.put('/api/ganhos/' + id, dados);
+  return {
+    id: res.id,
+    nome: res.nome,
+    valor: res.valor,
+    classe: res.categoriaNome || '',
+    categoriaId: res.categoriaId,
+    fixo: res.fixo,
+    data: formatarDataExibicao(res.data),
+    dataIso: res.data
+  };
+}
+
+// ─── 5. LÓGICA DE GASTOS E GANHOS ─────────────────────
 async function salvarGasto() {
   const nome   = document.getElementById('inp-nome').value;
   const valor  = document.getElementById('inp-valor').value;
@@ -192,8 +280,12 @@ async function salvarGasto() {
   ['err-nome', 'err-valor', 'err-classe', 'err-data'].forEach((id, i) => setError(id, erros[i]));
   if (erros.some(e => e !== '')) return;
 
-  const [y, m, d] = data.split('-');
-  const novoGasto = { nome: nome.trim(), valor: parseFloat(valor), classe: classe.trim(), data: `${d}/${m}/${y}` };
+  const novoGasto = {
+    nome: nome.trim(),
+    valor: parseFloat(valor),
+    categoriaId: parseInt(classe, 10),
+    data
+  };
 
   setBloqueadoFormulario(true);
   try {
@@ -203,8 +295,8 @@ async function salvarGasto() {
     ['inp-nome', 'inp-valor', 'inp-data'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('inp-classe').value = '';
     showToast(`✔ "${nome.trim()}" cadastrado!`, 'success');
-  } catch {
-    showToast('Erro ao salvar.', 'danger');
+  } catch (err) {
+    showToast(err.message || 'Erro ao salvar.', 'danger');
   } finally {
     setBloqueadoFormulario(false);
   }
@@ -221,8 +313,13 @@ async function salvarGanho() {
   ['err-ganho-nome', 'err-ganho-valor', 'err-ganho-classe', 'err-ganho-data'].forEach((id, i) => setError(id, erros[i]));
   if (erros.some(e => e !== '')) return;
 
-  const [y, m, d] = data.split('-');
-  const novoGanho = { nome: nome.trim(), valor: parseFloat(valor), classe: classe.trim(), data: `${d}/${m}/${y}`, fixo };
+  const novoGanho = {
+    nome: nome.trim(),
+    valor: parseFloat(valor),
+    categoriaId: parseInt(classe, 10),
+    data,
+    fixo
+  };
 
   setBloqueadoFormulario(true);
   try {
@@ -233,8 +330,8 @@ async function salvarGanho() {
     document.getElementById('ganho-classe').value = '';
     document.getElementById('ganho-fixo').checked = false;
     showToast(`✔ "${nome.trim()}" cadastrado!`, 'success');
-  } catch {
-    showToast('Erro ao salvar ganho.', 'danger');
+  } catch (err) {
+    showToast(err.message || 'Erro ao salvar ganho.', 'danger');
   } finally {
     setBloqueadoFormulario(false);
   }
@@ -253,8 +350,9 @@ async function confirmarRemocao() {
     renderListaRemover();
     atualizarStats();
     showToast('✔ Gasto removido!', 'danger');
-  } catch {
-    showToast('Erro ao remover.', 'danger'); fecharModal();
+  } catch (err) {
+    showToast(err.message || 'Erro ao remover.', 'danger');
+    fecharModal();
   } finally {
     setBloqueadoFormulario(false);
   }
@@ -271,8 +369,9 @@ async function confirmarRemocaoGanho() {
     renderListaRemoverGanho();
     atualizarStats();
     showToast('✔ Ganho removido!', 'danger');
-  } catch {
-    showToast('Erro ao remover.', 'danger'); fecharModal();
+  } catch (err) {
+    showToast(err.message || 'Erro ao remover.', 'danger');
+    fecharModal();
   } finally {
     setBloqueadoFormulario(false);
   }
@@ -290,10 +389,13 @@ async function confirmarEdicao() {
   ['err-edit-nome', 'err-edit-valor', 'err-edit-classe', 'err-edit-data'].forEach((id, i) => setError(id, erros[i]));
   if (erros.some(e => e !== '')) return;
 
-  const [y, m, d] = data.split('-');
-  const dados = { nome: nome.trim(), valor: parseFloat(valor), classe: classe.trim(), data: `${d}/${m}/${y}` };
+  const dados = {
+    nome: nome.trim(),
+    valor: parseFloat(valor),
+    categoriaId: parseInt(classe, 10),
+    data
+  };
 
-  // Bloqueia só os botões do modal de edição, não o app inteiro
   const btnSalvar = document.querySelector('#modal-editar-overlay .btn-primary');
   const btnCancelar = document.querySelector('#modal-editar-overlay .btn-cancel');
   if (btnSalvar) btnSalvar.disabled = true;
@@ -307,15 +409,57 @@ async function confirmarEdicao() {
     renderListaEditar();
     atualizarStats();
     showToast('✔ Atualizado com sucesso!', 'success');
-  } catch {
-    showToast('Erro ao atualizar.', 'danger');
+  } catch (err) {
+    showToast(err.message || 'Erro ao atualizar.', 'danger');
   } finally {
     if (btnSalvar) btnSalvar.disabled = false;
     if (btnCancelar) btnCancelar.disabled = false;
   }
 }
 
-// ─── 5. STATS E RENDERIZAÇÃO ──────────────────────────
+async function confirmarEdicaoGanho() {
+  if (idEditarGanho === null) return;
+
+  const nome   = document.getElementById('edit-ganho-nome').value;
+  const valor  = document.getElementById('edit-ganho-valor').value;
+  const classe = document.getElementById('edit-ganho-classe').value;
+  const data   = document.getElementById('edit-ganho-data').value;
+  const fixo   = document.getElementById('edit-ganho-fixo').checked;
+
+  const erros = [validarNome(nome), validarValor(valor), validarClasse(classe), validarData(data)];
+  ['err-edit-ganho-nome', 'err-edit-ganho-valor', 'err-edit-ganho-classe', 'err-edit-ganho-data'].forEach((id, i) => setError(id, erros[i]));
+  if (erros.some(e => e !== '')) return;
+
+  const dados = {
+    nome: nome.trim(),
+    valor: parseFloat(valor),
+    categoriaId: parseInt(classe, 10),
+    data,
+    fixo
+  };
+
+  const btnSalvar = document.querySelector('#modal-editar-ganho-overlay .btn-primary');
+  const btnCancelar = document.querySelector('#modal-editar-ganho-overlay .btn-cancel');
+  if (btnSalvar) btnSalvar.disabled = true;
+  if (btnCancelar) btnCancelar.disabled = true;
+
+  try {
+    const atualizado = await dbAtualizarGanho(idEditarGanho, dados);
+    const idx = historicoGanhos.findIndex(g => g.id === idEditarGanho);
+    if (idx !== -1) historicoGanhos[idx] = atualizado;
+    fecharModalEditarGanho();
+    renderListaEditarGanho();
+    atualizarStats();
+    showToast('✔ Ganho atualizado com sucesso!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Erro ao atualizar ganho.', 'danger');
+  } finally {
+    if (btnSalvar) btnSalvar.disabled = false;
+    if (btnCancelar) btnCancelar.disabled = false;
+  }
+}
+
+// ─── 6. STATS E RENDERIZAÇÃO ──────────────────────────
 function atualizarStats() {
   const totalGastos  = historico.reduce((s, g) => s + Number(g.valor), 0);
   const totalGanhos  = historicoGanhos.reduce((s, g) => s + Number(g.valor), 0);
@@ -353,9 +497,24 @@ function atualizarStats() {
 }
 
 function renderRelatorio() {
-  if (typeof filtrarRelatorioPorCategoria === 'function') {
-    filtrarRelatorioPorCategoria();
+  const cont = document.getElementById('tbody-relatorio');
+  if (!cont) return;
+  if (!historico.length) {
+    document.getElementById('empty-relatorio').style.display = 'block';
+    cont.innerHTML = '';
+    document.getElementById('total-rel').textContent = 'R$ 0,00';
+    return;
   }
+  document.getElementById('empty-relatorio').style.display = 'none';
+  cont.innerHTML = historico.map(g => `
+    <tr>
+      <td>${escHtml(g.nome)}</td>
+      <td class="val-cell">R$ ${formatVal(Number(g.valor))}</td>
+      <td><span class="tag-categoria">${escHtml(g.classe)}</span></td>
+      <td>${escHtml(g.data)}</td>
+    </tr>`).join('');
+  const total = historico.reduce((s, g) => s + Number(g.valor), 0);
+  document.getElementById('total-rel').textContent = `R$ ${formatVal(total)}`;
 }
 
 function renderListaRemover() {
@@ -367,7 +526,7 @@ function renderListaRemover() {
   cont.innerHTML = historico.map(g => `
     <div class="report-card">
       <div class="report-row">
-        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${g.data}</div></div>
+        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}</div></div>
         <div style="display:flex; align-items:center; gap:14px">
           <span class="val-cell">R$ ${formatVal(Number(g.valor))}</span>
           <button class="btn-remove" onclick="abrirModal(${g.id}, '${escHtml(g.nome)}')">✕ Remover</button>
@@ -385,7 +544,7 @@ function renderListaRemoverGanho() {
   cont.innerHTML = historicoGanhos.map(g => `
     <div class="report-card">
       <div class="report-row">
-        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${g.data}</div></div>
+        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}${g.fixo ? ' · Fixo' : ''}</div></div>
         <div style="display:flex; align-items:center; gap:14px">
           <span class="val-cell val-ganho">R$ ${formatVal(Number(g.valor))}</span>
           <button class="btn-remove" onclick="abrirModalGanho(${g.id}, '${escHtml(g.nome)}')">✕ Remover</button>
@@ -403,7 +562,7 @@ function renderListaEditar() {
   cont.innerHTML = historico.map(g => `
     <div class="report-card">
       <div class="report-row">
-        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${g.data}</div></div>
+        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}</div></div>
         <div style="display:flex; align-items:center; gap:14px">
           <span class="val-cell">R$ ${formatVal(Number(g.valor))}</span>
           <button class="btn-edit" onclick="abrirModalEditar(${g.id})">✎ Editar</button>
@@ -412,7 +571,25 @@ function renderListaEditar() {
     </div>`).join('');
 }
 
-// ─── 6. MODAIS ────────────────────────────────────────
+function renderListaEditarGanho() {
+  const cont = document.getElementById('lista-editar-ganho');
+  if (!cont) return;
+  if (!historicoGanhos.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-text">Nenhum ganho para editar</div></div>`; return;
+  }
+  cont.innerHTML = historicoGanhos.map(g => `
+    <div class="report-card">
+      <div class="report-row">
+        <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}${g.fixo ? ' · Fixo' : ''}</div></div>
+        <div style="display:flex; align-items:center; gap:14px">
+          <span class="val-cell val-ganho">R$ ${formatVal(Number(g.valor))}</span>
+          <button class="btn-edit btn-ganho" onclick="abrirModalEditarGanho(${g.id})">✎ Editar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── 7. MODAIS E NAVEGAÇÃO ────────────────────────────
 function showView(view, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -422,6 +599,7 @@ function showView(view, btn) {
   if (view === 'remover')       renderListaRemover();
   if (view === 'remover-ganho') renderListaRemoverGanho();
   if (view === 'editar')        renderListaEditar();
+  if (view === 'editar-ganho')  renderListaEditarGanho();
   if (view === 'relatorio')     renderRelatorio();
 }
 
@@ -440,7 +618,8 @@ function abrirModalGanho(id, nome) {
 }
 
 function fecharModal() {
-  idRemover = null; idRemoverGanho = null;
+  idRemover = null;
+  idRemoverGanho = null;
   const overlay = document.getElementById('modal-overlay');
   overlay.classList.remove('open');
   delete overlay.dataset.tipo;
@@ -450,12 +629,11 @@ function abrirModalEditar(id) {
   const g = historico.find(x => x && x.id === id);
   if (!g) return;
   idEditar = id;
-  document.getElementById('edit-nome').value  = g.nome;
-  document.getElementById('edit-valor').value = g.valor;
-  document.getElementById('edit-classe').value = g.classe;
-  const [d, m, y] = g.data.split('/');
-  document.getElementById('edit-data').value = `${y}-${m}-${d}`;
-  ['err-edit-nome', 'err-edit-valor', 'err-edit-classe', 'err-edit-data'].forEach(id => setError(id, ''));
+  document.getElementById('edit-nome').value   = g.nome;
+  document.getElementById('edit-valor').value  = g.valor;
+  document.getElementById('edit-classe').value = g.categoriaId;
+  document.getElementById('edit-data').value   = formatarDataIso(g.dataIso || g.data);
+  ['err-edit-nome', 'err-edit-valor', 'err-edit-classe', 'err-edit-data'].forEach(x => setError(x, ''));
   document.getElementById('modal-editar-overlay').classList.add('open');
 }
 
@@ -464,11 +642,32 @@ function fecharModalEditar() {
   document.getElementById('modal-editar-overlay').classList.remove('open');
 }
 
-// ─── 7. LIMITE MENSAL ─────────────────────────────────
-function carregarLimiteSalvo() {
-  const email = document.getElementById('user-email-display').textContent;
-  const salvo = localStorage.getItem(`limite_${email}`);
-  limiteMensal = salvo ? parseFloat(salvo) : 0;
+function abrirModalEditarGanho(id) {
+  const g = historicoGanhos.find(x => x && x.id === id);
+  if (!g) return;
+  idEditarGanho = id;
+  document.getElementById('edit-ganho-nome').value   = g.nome;
+  document.getElementById('edit-ganho-valor').value  = g.valor;
+  document.getElementById('edit-ganho-classe').value = g.categoriaId;
+  document.getElementById('edit-ganho-data').value   = formatarDataIso(g.dataIso || g.data);
+  document.getElementById('edit-ganho-fixo').checked = !!g.fixo;
+  ['err-edit-ganho-nome', 'err-edit-ganho-valor', 'err-edit-ganho-classe', 'err-edit-ganho-data'].forEach(x => setError(x, ''));
+  document.getElementById('modal-editar-ganho-overlay').classList.add('open');
+}
+
+function fecharModalEditarGanho() {
+  idEditarGanho = null;
+  document.getElementById('modal-editar-ganho-overlay').classList.remove('open');
+}
+
+// ─── 8. LIMITE MENSAL ─────────────────────────────────
+async function carregarLimiteSalvo() {
+  try {
+    const data = await API.get('/api/limite');
+    limiteMensal = data ? (parseFloat(data.valor) || 0) : 0;
+  } catch {
+    limiteMensal = 0;
+  }
 
   const inp = document.getElementById('inp-limite');
   if (inp) inp.value = limiteMensal > 0 ? limiteMensal : '';
@@ -477,7 +676,7 @@ function carregarLimiteSalvo() {
   if (el) el.textContent = `R$ ${formatVal(limiteMensal)}`;
 }
 
-function salvarLimiteMensal() {
+async function salvarLimiteMensal() {
   const inp = document.getElementById('inp-limite');
   if (!inp) { showToast('Campo de limite não encontrado.', 'danger'); return; }
 
@@ -486,61 +685,128 @@ function salvarLimiteMensal() {
     showToast('Informe um valor válido para o limite.', 'danger'); return;
   }
 
-  const email = document.getElementById('user-email-display').textContent;
-  limiteMensal = val;
-  localStorage.setItem(`limite_${email}`, limiteMensal);
+  try {
+    const res = await API.put('/api/limite', { valor: val });
+    limiteMensal = res ? parseFloat(res.valor) : val;
 
-  const el = document.getElementById('stat-limite');
-  if (el) el.textContent = `R$ ${formatVal(limiteMensal)}`;
-  atualizarStats();
-  showToast('✔ Limite salvo!', 'success');
+    const el = document.getElementById('stat-limite');
+    if (el) el.textContent = `R$ ${formatVal(limiteMensal)}`;
+    atualizarStats();
+    showToast('✔ Limite salvo!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Erro ao salvar limite.', 'danger');
+  }
 }
 
-// ─── 8. UTILITÁRIOS ───────────────────────────────────
+// ─── 9. GOOGLE AUTH (GSI) ─────────────────────────────
+function inicializarGoogleAuth() {
+  if (!window.google || typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) return;
+
+  try {
+    google.accounts.id.initialize({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredentialResponse,
+    });
+
+    const btnLogin = document.getElementById('google-btn-login');
+    if (btnLogin) {
+      google.accounts.id.renderButton(btnLogin, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: 280,
+      });
+    }
+
+    const btnReg = document.getElementById('google-btn-reg');
+    if (btnReg) {
+      google.accounts.id.renderButton(btnReg, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signup_with',
+        shape: 'rectangular',
+        width: 280,
+      });
+    }
+  } catch (e) {
+    console.warn('Google Identity Services não inicializado:', e);
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response || !response.credential) return;
+
+  setBloqueadoAuth(true);
+  try {
+    const dados = await API.post('/api/auth/google', { idToken: response.credential });
+    API.setToken(dados.token);
+
+    let email = 'Google User';
+    try {
+      const payload = JSON.parse(atob(dados.token.split('.')[1]));
+      if (payload.email) email = payload.email;
+    } catch {}
+
+    API.setEmail(email);
+    await entrarNoApp(email);
+  } catch (err) {
+    setError('err-login-geral', err.message || 'Erro ao autenticar com Google.');
+    setError('err-reg-geral', err.message || 'Erro ao autenticar com Google.');
+  } finally {
+    setBloqueadoAuth(false);
+  }
+}
+
+// ─── 10. UTILITÁRIOS ──────────────────────────────────
 function validarNome(v)   { return (!v || v.trim().length === 0) ? 'Informe um nome.' : (/^\d+$/.test(v.trim()) ? 'Apenas números não é válido.' : ''); }
 function validarValor(v)  { const n = parseFloat(v); return (isNaN(n) || n <= 0) ? 'Valor inválido.' : ''; }
-function validarClasse(v) { return (!v || v.trim().length === 0) ? 'Informe a categoria.' : ''; }
+function validarClasse(v) { return (!v || String(v).trim().length === 0) ? 'Informe a categoria.' : ''; }
 function validarData(v)   { return !v ? 'Selecione a data.' : ''; }
 function setError(id, msg){ const el = document.getElementById(id); if (el) el.textContent = msg; }
 function formatVal(n)     { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function escHtml(s)       { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-// Bloqueia apenas os formulários de cadastro/ganho, nunca o card de limite
 function setBloqueadoFormulario(e) {
-  ['inp-nome','inp-valor','inp-classe','inp-data',
-   'ganho-nome','ganho-valor','ganho-classe','ganho-data','ganho-fixo']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = e; });
-  // Bloqueia botões de cadastro
-  document.querySelectorAll('.btn-primary, .btn-ganho, .btn-confirm-remove').forEach(el => {
-    if (!el.closest('#modal-editar-overlay') && !el.closest('#card-limite')) el.disabled = e;
+  const b = document.querySelectorAll('#view-cadastro .btn-primary, #view-cadastro-ganho .btn-primary, #modal-overlay button');
+  b.forEach(x => {
+    x.disabled = e;
+    x.style.opacity = e ? '0.5' : '1';
+    x.style.cursor = e ? 'not-allowed' : 'pointer';
   });
 }
 
 function setBloqueadoAuth(e) {
-  document.querySelectorAll('#tela-auth button, #tela-auth input').forEach(el => el.disabled = e);
+  const b = document.querySelectorAll('.btn-auth');
+  b.forEach(x => {
+    x.disabled = e;
+    x.style.opacity = e ? '0.5' : '1';
+    x.style.cursor = e ? 'not-allowed' : 'pointer';
+  });
 }
 
-let toastTimer;
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
-  t.className = 'toast show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ─── 9. EVENTOS ───────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const act = document.activeElement.id;
-    if (['ganho-nome','ganho-valor','ganho-classe','ganho-data'].includes(act)) salvarGanho();
-    if (['inp-nome','inp-valor','inp-classe','inp-data'].includes(act)) salvarGasto();
-    if (act === 'login-senha') fazerLogin();
-    if (act === 'reg-confirma') fazerCadastro();
-    if (act === 'inp-limite') salvarLimiteMensal();
+// ─── 11. INICIALIZAÇÃO ────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const token = API.getToken();
+  const email = API.getEmail();
+  if (token && email) {
+    try {
+      await entrarNoApp(email);
+    } catch {
+      fazerLogout();
+    }
   }
 });
 
-document.getElementById('modal-overlay').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
-document.getElementById('modal-editar-overlay').addEventListener('click', function(e) { if (e.target === this) fecharModalEditar(); });
+window.addEventListener('load', () => {
+  setTimeout(inicializarGoogleAuth, 400);
+});

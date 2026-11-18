@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="filters.css" />
   <link rel="icon" type="image/png" href="favicon.ico" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     .auth-form { display: none !important; }
     .auth-form.active { display: block !important; }
@@ -71,6 +72,8 @@
         </div>
         <div class="error-msg auth-error" id="err-login-geral"></div>
         <button class="btn-auth" onclick="fazerLogin()">⬡ &nbsp; Entrar</button>
+        <div class="google-auth-separator"><span>OU</span></div>
+        <div id="google-btn-login" class="google-btn-container"></div>
       </div>
       <div id="form-cadastro-conta" class="auth-form">
         <div class="form-group">
@@ -80,7 +83,7 @@
         </div>
         <div class="form-group">
           <label>Senha</label>
-          <input type="password" id="reg-senha" placeholder="mínimo 6 caracteres" />
+          <input type="password" id="reg-senha" placeholder="mínimo 8 caracteres" />
           <div class="error-msg" id="err-reg-senha"></div>
         </div>
         <div class="form-group">
@@ -90,6 +93,8 @@
         </div>
         <div class="error-msg auth-error" id="err-reg-geral"></div>
         <button class="btn-auth" onclick="fazerCadastro()">⬡ &nbsp; Criar Conta</button>
+        <div class="google-auth-separator"><span>OU</span></div>
+        <div id="google-btn-reg" class="google-btn-container"></div>
       </div>
     </div>
   </div>
@@ -143,6 +148,9 @@
         <button class="nav-btn nav-btn-ganho" onclick="showView('remover-ganho', this)">
           <span class="icon">✕</span> Remover Ganho
         </button>
+        <button class="nav-btn nav-btn-ganho" onclick="showView('editar-ganho', this)">
+          <span class="icon">✎</span> Editar Ganho
+        </button>
         <div class="nav-divider"></div>
         <button class="nav-btn" onclick="showView('cadastro', this)">
           <span class="icon">＋</span> Cadastrar Gasto
@@ -179,7 +187,9 @@
               </div>
               <div class="form-group">
                 <label for="ganho-classe">Categoria</label>
-                <input type="text" id="ganho-classe" placeholder="Ex: Salário, Renda Extra..." />
+                <select id="ganho-classe" class="filtro-input filtro-select">
+                  <option value="" disabled selected>Selecione uma categoria...</option>
+                </select>
                 <div class="error-msg" id="err-ganho-classe"></div>
               </div>
               <div class="form-group">
@@ -205,6 +215,12 @@
         <div id="view-remover-ganho" class="view">
           <div class="panel-header"><div class="panel-title">◈ Remover Ganho</div></div>
           <div class="panel-body"><div id="lista-remover-ganho"></div></div>
+        </div>
+
+        <!-- EDITAR GANHO -->
+        <div id="view-editar-ganho" class="view">
+          <div class="panel-header"><div class="panel-title">◈ Editar Ganho</div></div>
+          <div class="panel-body"><div id="lista-editar-ganho"></div></div>
         </div>
 
         <!-- CADASTRAR GASTO -->
@@ -360,8 +376,50 @@
     </div>
   </div>
 
+  <!-- MODAL EDITAR GANHO -->
+  <div class="modal-overlay" id="modal-editar-ganho-overlay">
+    <div class="modal">
+      <h3>✎ EDITAR GANHO</h3>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="edit-ganho-nome" />
+        <div class="error-msg" id="err-edit-ganho-nome"></div>
+      </div>
+      <div class="form-group">
+        <label>Valor</label>
+        <input type="number" id="edit-ganho-valor" step="0.01" min="0.01" />
+        <div class="error-msg" id="err-edit-ganho-valor"></div>
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="edit-ganho-classe" class="filtro-input filtro-select">
+          <option value="" disabled>Selecione uma categoria...</option>
+        </select>
+        <div class="error-msg" id="err-edit-ganho-classe"></div>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="edit-ganho-data" />
+        <div class="error-msg" id="err-edit-ganho-data"></div>
+      </div>
+      <div class="form-group full">
+        <label class="checkbox-label">
+          <input type="checkbox" id="edit-ganho-fixo" />
+          <span class="checkbox-custom"></span>
+          Ganho fixo mensal
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="fecharModalEditarGanho()">Cancelar</button>
+        <button class="btn-primary btn-ganho" onclick="confirmarEdicaoGanho()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
+  <script src="config.js"></script>
+  <script src="api.js"></script>
   <script src="app.js"></script>
   <script src="filters.js"></script>
 </body>
