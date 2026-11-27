@@ -3,10 +3,10 @@
 <div align="center">
 
 ![Finance Control System](https://img.shields.io/badge/Finance%20Control-System-00f5ff?style=for-the-badge&labelColor=0d0d0d)
-![Status](https://img.shields.io/badge/status-online-00ff88?style=for-the-badge&labelColor=0d0d0d)
-![Jest](https://img.shields.io/badge/testes-42%20passed-ffd700?style=for-the-badge&labelColor=0d0d0d)
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&labelColor=0d0d0d)
+![xUnit](https://img.shields.io/badge/testes-27%20passed-ffd700?style=for-the-badge&labelColor=0d0d0d)
 
-**Sistema de controle de gastos pessoais com autenticação, dados na nuvem e balanço financeiro.**
+**Sistema de controle de gastos e ganhos pessoais com API REST em .NET 10 (Clean Architecture), PostgreSQL em Docker e frontend web.**
 
 [🌐 Acessar o Sistema](https://kyon-s2.github.io/ControleFinanceiro/)
 
@@ -25,22 +25,19 @@
 
 ## 📌 Sobre o Projeto
 
-O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais com autenticação de usuários, persistência de dados na nuvem e isolamento por conta.
+O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais com autenticação segura via JWT e Google, persistência em banco relacional PostgreSQL e isolamento completo de dados por usuário.
 
 ## ✨ Funcionalidades
 
-- 🔐 **Autenticação** — cadastro e login com e-mail e senha via Supabase Auth
-- ➕ **Cadastro de Gastos** — nome, valor, categoria (select) e data
-- ✏️ **Edição de Gastos** — atualização de qualquer campo com categoria em select
-- ✕ **Remoção de Gastos** — com modal de confirmação antes de excluir
-- ➕ **Cadastro de Ganhos** — nome, valor, categoria, data e flag de ganho fixo mensal
-- ✕ **Remoção de Ganhos** — com modal de confirmação antes de excluir
+- 🔐 **Autenticação JWT & Google** — cadastro e login com e-mail/senha (BCrypt) ou via **Google Identity Services**
+- 🛡️ **Proteção Antiabuso** — normalização de e-mail (`EmailNormalizer`), bloqueio de domínios descartáveis e *Rate Limiting* por IP
+- 🏷️ **Categorias Dinâmicas** — CRUD completo de categorias por usuário
+- ➕ **CRUD de Gastos** — criação, listagem com filtros (`nome`, `categoriaId`, `mes`), edição e remoção
+- 💰 **CRUD de Ganhos** — criação, listagem com filtros, **edição completa**, remoção e flag de ganho fixo mensal
 - 📊 **Relatório** — tabela completa com filtro por categoria e total acumulado
-- 📈 **Dashboard** — total acumulado, quantidade de gastos e maior gasto
-- ⚖️ **Balanço Financeiro** — diferença entre ganhos e gastos em tempo real
-- 🎯 **Limite Mensal** — definição de teto de gastos com alerta visual ao atingir 80% e 100%
-- 💾 **Dados na nuvem** — persistência real via Supabase (PostgreSQL)
-- 🔒 **Isolamento por usuário** — Row Level Security (RLS) no banco
+- 📈 **Resumo & Dashboard** — total de gastos, quantidade, maior gasto, total de ganhos e saldo em tempo real (`/api/resumo`)
+- 🎯 **Limite Mensal** — definição de teto de gastos no banco (`/api/limite`) com alerta visual em 80% (`Alerta80`) e 100% (`Estourado`)
+- 📚 **Swagger UI & RFC 7807** — documentação interativa com suporte a Bearer Token (`/swagger`) e respostas de erro padronizadas (`ProblemDetails`)
 
 ---
 
@@ -48,139 +45,81 @@ O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais 
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend | HTML5, CSS3, JavaScript (ES6+) |
-| Banco de dados | Supabase (PostgreSQL) |
-| Autenticação | Supabase Auth |
-| Testes | Jest |
+| Frontend | HTML5, CSS3, JavaScript (ES6+), Google Identity Services |
+| Backend | C# / .NET 10, ASP.NET Core Web API (Clean Architecture) |
+| Banco de dados | PostgreSQL 16 (Docker) + Entity Framework Core (Npgsql) |
+| Autenticação | JWT Bearer, BCrypt.Net-Next, Google.Apis.Auth |
+| Documentação API | Swagger UI (Swashbuckle) |
+| Testes | xUnit (unitários + integração com `WebApplicationFactory` e SQLite em memória) |
 | CI/CD | GitHub Actions |
-| Deploy | GitHub Pages |
 
 ---
 
 ## 🚀 Como Rodar Localmente
 
-**Pré-requisitos:** Node.js instalado, VS Code com extensão Live Server e uma conta no [Supabase](https://supabase.com)
+**Pré-requisitos:** [.NET 10 SDK](https://dotnet.microsoft.com/), [Docker / Docker Compose](https://www.docker.com/) e um servidor estático para o frontend (ex.: extensão Live Server no VS Code ou `python3 -m http.server`).
 
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/Kyon-S2/ControleFinanceiro.git
 cd ControleFinanceiro
 
-# 2. Instale as dependências
-npm install
+# 2. Configure as variáveis de ambiente do backend
+cp backend/.env.example backend/.env
+# Preencha backend/.env com sua senha do Postgres, JWT_KEY e GOOGLE_CLIENT_ID
+# ⚠️ Nunca envie arquivos .env ou config.js reais para o repositório.
 
-# 3. Configure as credenciais do Supabase
-# As credenciais (SUPABASE_URL e SUPABASE_ANON) estão no topo do app.js.
-# Caso prefira, crie um arquivo config.js baseado no config.example.js
-# e importe as variáveis no app.js.
-# ⚠️ Nunca envie credenciais reais para o repositório.
+# 3. Suba o banco de dados PostgreSQL 16
+docker compose -f backend/docker-compose.yml up -d
 
-# 4. Abra o index.html com a extensão Live Server no VS Code
+# 4. Execute a API .NET (as migrations rodam automaticamente em Development)
+dotnet run --project backend/ControleFinanceiro.Api
 ```
+
+A API iniciará em `http://localhost:5065` e a documentação interativa estará disponível em `http://localhost:5065/swagger`.
+
+### Configurando e abrindo o Frontend
+
+```bash
+# 5. Copie o modelo de configuração do frontend
+cp config.example.js config.js
+# Ajuste API_URL (padrão http://localhost:5065) e GOOGLE_CLIENT_ID se desejar testar login Google
+
+# 6. Sirva os arquivos estáticos na porta 5500 (ou abra index.html com Live Server)
+python3 -m http.server 5500
+```
+
+Acesse `http://localhost:5500` no navegador.
 
 ---
 
-## ⚙️ Configuração do Supabase
+## 🔌 Principais Endpoints da API
 
-### 1. Crie a tabela `gastos` no SQL Editor
-
-```sql
-CREATE TABLE gastos (
-  id        BIGSERIAL PRIMARY KEY,
-  nome      TEXT      NOT NULL,
-  valor     NUMERIC   NOT NULL,
-  classe    TEXT      NOT NULL,
-  data      TEXT      NOT NULL,
-  user_id   UUID      REFERENCES auth.users(id),
-  criado_em TIMESTAMP DEFAULT NOW()
-);
-```
-
-### 2. Crie a tabela `ganhos` no SQL Editor
-
-```sql
-CREATE TABLE ganhos (
-  id        BIGSERIAL PRIMARY KEY,
-  nome      TEXT      NOT NULL,
-  valor     NUMERIC   NOT NULL,
-  classe    TEXT      NOT NULL,
-  data      TEXT      NOT NULL,
-  fixo      BOOLEAN   DEFAULT FALSE,
-  user_id   UUID      REFERENCES auth.users(id),
-  criado_em TIMESTAMP DEFAULT NOW()
-);
-```
-
-### 3. Configure as policies (RLS) para `gastos`
-
-```sql
-ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "select_proprio" ON gastos
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-
-CREATE POLICY "insert_proprio" ON gastos
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "update_proprio" ON gastos
-  FOR UPDATE TO authenticated USING (auth.uid() = user_id);
-
-CREATE POLICY "delete_proprio" ON gastos
-  FOR DELETE TO authenticated USING (auth.uid() = user_id);
-```
-
-### 4. Configure as policies (RLS) para `ganhos`
-
-```sql
-ALTER TABLE ganhos ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "select_ganho_proprio" ON ganhos
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-
-CREATE POLICY "insert_ganho_proprio" ON ganhos
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "delete_ganho_proprio" ON ganhos
-  FOR DELETE TO authenticated USING (auth.uid() = user_id);
-```
-
-### 5. Trigger para preencher `user_id` automaticamente
-
-```sql
-CREATE OR REPLACE FUNCTION preencher_user_id()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.user_id := auth.uid();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER trigger_user_id_gastos
-  BEFORE INSERT ON gastos
-  FOR EACH ROW EXECUTE FUNCTION preencher_user_id();
-
-CREATE TRIGGER trigger_user_id_ganhos
-  BEFORE INSERT ON ganhos
-  FOR EACH ROW EXECUTE FUNCTION preencher_user_id();
-```
+| Recurso | Rotas | Descrição |
+|---------|-------|-----------|
+| Autenticação | `POST /api/auth/register`, `login`, `google` | Cadastro, login com senha e login Google |
+| Categorias | `GET`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/categorias` | Gestão de categorias do usuário |
+| Gastos | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/gastos` | CRUD de gastos com filtros |
+| Ganhos | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/ganhos` | CRUD de ganhos com filtros |
+| Limite Mensal | `GET /api/limite`, `PUT /api/limite` | Consulta e definição do teto mensal |
+| Resumo | `GET /api/resumo?mes=yyyy-MM` | Totais, saldo e status do limite |
 
 ---
 
 ## 🧪 Testes
 
-O projeto possui **42 testes automatizados** cobrindo:
+O projeto possui **27 testes automatizados (xUnit)** cobrindo o código real da aplicação:
 
-- Validação de valor, nome, classe e data
-- Validação de e-mail, senha e confirmação de senha
-- Cálculo de total e maior gasto
-- Remoção de gastos por ID
-- Formatação de valores em real brasileiro
+- Normalização de e-mail (`EmailNormalizer` para Gmail e outros domínios)
+- Validações de regras de negócio de `Gasto` e `Ganho` (valor positivo, nome não numérico)
+- Cálculo do resumo financeiro mensal e `statusLimite` (80% e 100%)
+- Testes de integração ponta a ponta com `WebApplicationFactory` e SQLite em memória (fluxo registro → login → criação de gasto e bloqueio 409 de e-mail normalizado duplicado)
 
 ```bash
-npm test
+dotnet test backend/ControleFinanceiro.slnx
 ```
 
-A pipeline de CI roda automaticamente a cada push via **GitHub Actions**.
+A pipeline de CI roda automaticamente via **GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ---
 
@@ -190,37 +129,41 @@ A pipeline de CI roda automaticamente a cada push via **GitHub Actions**.
 ControleFinanceiro/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                        # Pipeline de testes automáticos
+│       └── ci.yml                              # Pipeline de testes .NET (GitHub Actions)
+├── backend/
+│   ├── ControleFinanceiro.slnx                 # Solution .NET 10
+│   ├── ControleFinanceiro.Domain/              # Entidades, regras e EmailNormalizer
+│   ├── ControleFinanceiro.Application/         # Services, DTOs e interfaces
+│   ├── ControleFinanceiro.Infrastructure/      # EF Core, AppDbContext, migrations, Auth
+│   ├── ControleFinanceiro.Api/                 # Controllers, Swagger e Middleware RFC 7807
+│   ├── ControleFinanceiro.Tests/               # 27 testes unitários e de integração (xUnit)
+│   ├── docker-compose.yml                      # Container PostgreSQL 16
+│   └── .env.example                            # Modelo de variáveis de ambiente
 ├── .gitignore
-├── app.js                                # Lógica principal e integração Supabase
-├── app.tests.js                          # Testes automatizados (Jest)
-├── config.example.js                     # Modelo de configuração (sem credenciais)
-├── favicon.ico                           # Ícone do site
-├── filters.css                           # Estilos do painel de filtros
-├── filters.js                            # Lógica de filtro por categoria no relatório
-├── index.html                            # Estrutura da aplicação
-├── novos_testes_para_app.tests.js        # Testes extras (filtros avançados e busca)
-├── package.json
-├── package-lock.json
-├── README.md
-└── style.css                             # Estilização principal (tema cyberpunk)
+├── api.js                                      # Client HTTP (fetch + Bearer JWT)
+├── app.js                                      # Lógica do frontend integrada à API
+├── config.example.js                           # Modelo de configuração do frontend
+├── favicon.ico                                 # Ícone do site
+├── filters.css                                 # Estilos do painel de filtros
+├── filters.js                                  # Lógica de filtro por categoria no relatório
+├── index.html                                  # Estrutura da aplicação
+├── PROGRESSO.md                                # Acompanhamento das fases da migração
+└── style.css                                   # Estilização principal (tema cyberpunk)
 ```
 
 ---
 
 ## 🔄 Origem do Projeto
 
-Este projeto foi originalmente desenvolvido em **Python (CLI)** durante o BootCamp II e convertido para uma aplicação web completa como entrega intermediária, mantendo a mesma lógica de validação e expandindo com:
+Este projeto foi originalmente desenvolvido em **Python (CLI)** durante o BootCamp II, evoluído para uma aplicação web integrada ao Supabase e, posteriormente, migrado para uma **API REST própria em .NET 10 com Clean Architecture e PostgreSQL**, mantendo a mesma identidade visual e expandindo com:
 
-- Interface gráfica web com tema cyberpunk
-- Autenticação de usuários
-- Banco de dados na nuvem com duas tabelas (gastos e ganhos)
-- Edição de registros com RLS no Supabase
-- Balanço financeiro e limite mensal com alertas visuais
-- Filtro de relatório por categoria
-- Testes automatizados e pipeline de CI/CD
+- Backend próprio em .NET 10 com camadas desacopladas (Domain, Application, Infrastructure, Api)
+- Autenticação JWT, BCrypt e Login com Google
+- Edição de ganhos e categorias dinâmicas por usuário
+- Tratamento global de exceções (RFC 7807), Rate Limiting e Swagger UI
+- 27 testes automatizados em xUnit e pipeline de CI no GitHub Actions
 
-Agora o projeto está sendo utilizado como projeto final na disciplina de **Backend**.
+Agora o projeto é utilizado como projeto final na disciplina de **Backend**.
 
 ---
 
