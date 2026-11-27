@@ -22,7 +22,6 @@ public static class DependencyInjection
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
-        services.AddSingleton<IGoogleAuthValidator, GoogleAuthValidator>();
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddScoped<ICategoriaService, CategoriaService>();

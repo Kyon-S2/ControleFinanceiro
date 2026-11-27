@@ -65,28 +65,4 @@ public class AuthController(IAuthService authService) : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Autentica ou cadastra o usuário através do token Google OAuth.
-    /// </summary>
-    /// <remarks>
-    /// Exemplo de requisição:
-    ///
-    ///     POST /api/auth/google
-    ///     {
-    ///        "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
-    ///     }
-    ///
-    /// </remarks>
-    /// <param name="request">Token JWT do Google</param>
-    /// <returns>Token JWT de acesso</returns>
-    [HttpPost("google")]
-    [EnableRateLimiting("auth")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> Google([FromBody] GoogleAuthRequest request)
-    {
-        var result = await authService.GoogleAsync(request);
-        return Ok(result);
-    }
 }
