@@ -18,8 +18,8 @@
 
 | Nome | GitHub |
 |------|--------|
-| Felipe Gabriel do Nascimento Rodrigues| — |
-| Daniel Carlos Delfino dos Santos| — |
+| Felipe Gabriel do Nascimento Rodrigues| https://github.com/Kyon-S2 |
+| Daniel Carlos Delfino dos Santos| https://github.com/danielzinrx |
 
 ---
 
