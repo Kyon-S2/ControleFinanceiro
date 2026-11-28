@@ -54,12 +54,17 @@ const API = {
     }
 
     if (res.status === 401) {
-      this.setToken(null);
-      this.setEmail(null);
-      if (typeof fazerLogout === 'function') {
-        fazerLogout(true);
+      // Se é uma chamada de login/register, NÃO tratar como sessão expirada
+      const isAuthEndpoint = endpoint.startsWith('/api/auth/');
+      if (!isAuthEndpoint) {
+        this.setToken(null);
+        this.setEmail(null);
+        if (typeof fazerLogout === 'function') {
+          fazerLogout(true);
+        }
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
-      throw new Error('Sessão expirada. Faça login novamente.');
+      // Para endpoints de auth, deixar cair no tratamento genérico abaixo
     }
 
     if (res.status === 204) {

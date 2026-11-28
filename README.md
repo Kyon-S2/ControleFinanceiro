@@ -25,11 +25,11 @@
 
 ## 📌 Sobre o Projeto
 
-O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais com autenticação segura via JWT e Google, persistência em banco relacional PostgreSQL e isolamento completo de dados por usuário.
+O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais com autenticação segura via JWT, persistência em banco relacional PostgreSQL e isolamento completo de dados por usuário.
 
 ## ✨ Funcionalidades
 
-- 🔐 **Autenticação JWT & Google** — cadastro e login com e-mail/senha (BCrypt) ou via **Google Identity Services**
+- 🔐 **Autenticação JWT** — cadastro e login com e-mail/senha (BCrypt)
 - 🛡️ **Proteção Antiabuso** — normalização de e-mail (`EmailNormalizer`), bloqueio de domínios descartáveis e *Rate Limiting* por IP
 - 🏷️ **Categorias Dinâmicas** — CRUD completo de categorias por usuário
 - ➕ **CRUD de Gastos** — criação, listagem com filtros (`nome`, `categoriaId`, `mes`), edição e remoção
@@ -45,10 +45,10 @@ O **Sistema de controle financeiro** permite controlar gastos e ganhos pessoais 
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend | HTML5, CSS3, JavaScript (ES6+), Google Identity Services |
+| Frontend | HTML5, CSS3, JavaScript (ES6+) |
 | Backend | C# / .NET 10, ASP.NET Core Web API (Clean Architecture) |
 | Banco de dados | PostgreSQL 16 (Docker) + Entity Framework Core (Npgsql) |
-| Autenticação | JWT Bearer, BCrypt.Net-Next, Google.Apis.Auth |
+| Autenticação | JWT Bearer, BCrypt.Net-Next |
 | Documentação API | Swagger UI (Swashbuckle) |
 | Testes | xUnit (unitários + integração com `WebApplicationFactory` e SQLite em memória) |
 | CI/CD | GitHub Actions |
@@ -66,7 +66,10 @@ cd ControleFinanceiro
 
 # 2. Configure as variáveis de ambiente do backend
 cp backend/.env.example backend/.env
-# Preencha backend/.env com sua senha do Postgres, JWT_KEY e GOOGLE_CLIENT_ID
+# Preencha backend/.env com sua senha do Postgres
+# O Docker Compose usa este arquivo para configurar o PostgreSQL.
+# A API .NET lê suas configurações de appsettings.json (ou appsettings.Development.json)
+# e de variáveis de ambiente do sistema. Ajuste a connection string e Jwt:Key lá.
 # ⚠️ Nunca envie arquivos .env ou config.js reais para o repositório.
 
 # 3. Suba o banco de dados PostgreSQL 16
@@ -83,7 +86,7 @@ A API iniciará em `http://localhost:5065` e a documentação interativa estará
 ```bash
 # 5. Copie o modelo de configuração do frontend
 cp config.example.js config.js
-# Ajuste API_URL (padrão http://localhost:5065) e GOOGLE_CLIENT_ID se desejar testar login Google
+# Ajuste API_URL (padrão http://localhost:5065) se necessário
 
 # 6. Sirva os arquivos estáticos na porta 5500 (ou abra index.html com Live Server)
 python3 -m http.server 5500
@@ -97,7 +100,7 @@ Acesse `http://localhost:5500` no navegador.
 
 | Recurso | Rotas | Descrição |
 |---------|-------|-----------|
-| Autenticação | `POST /api/auth/register`, `login`, `google` | Cadastro, login com senha e login Google |
+| Autenticação | `POST /api/auth/register`, `login` | Cadastro e login com senha |
 | Categorias | `GET`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/categorias` | Gestão de categorias do usuário |
 | Gastos | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/gastos` | CRUD de gastos com filtros |
 | Ganhos | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` em `/api/ganhos` | CRUD de ganhos com filtros |
@@ -158,7 +161,7 @@ ControleFinanceiro/
 Este projeto foi originalmente desenvolvido em **Python (CLI)** durante o BootCamp II, evoluído para uma aplicação web integrada ao Supabase e, posteriormente, migrado para uma **API REST própria em .NET 10 com Clean Architecture e PostgreSQL**, mantendo a mesma identidade visual e expandindo com:
 
 - Backend próprio em .NET 10 com camadas desacopladas (Domain, Application, Infrastructure, Api)
-- Autenticação JWT, BCrypt e Login com Google
+- Autenticação JWT e BCrypt
 - Edição de ganhos e categorias dinâmicas por usuário
 - Tratamento global de exceções (RFC 7807), Rate Limiting e Swagger UI
 - 27 testes automatizados em xUnit e pipeline de CI no GitHub Actions

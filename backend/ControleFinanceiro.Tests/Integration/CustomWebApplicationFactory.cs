@@ -15,6 +15,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", "");
+        builder.UseSetting("Jwt:Key", "TESTING_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN");
 
         builder.ConfigureServices(services =>
         {

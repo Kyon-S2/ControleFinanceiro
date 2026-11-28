@@ -12,6 +12,11 @@ public class JwtTokenGenerator(IConfiguration config) : IJwtTokenGenerator
     public string GenerateToken(Guid userId, string email)
     {
         var rawKey = config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(rawKey)
+            && !string.Equals(config["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("A chave JWT (Jwt:Key) é obrigatória em produção.");
+        }
         var keyStr = string.IsNullOrWhiteSpace(rawKey)
             ? "DEV_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN_TEST"
             : rawKey;

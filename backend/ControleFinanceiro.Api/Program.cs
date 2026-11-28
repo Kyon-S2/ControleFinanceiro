@@ -79,6 +79,12 @@ builder.Services.AddSwaggerGen(options =>
 
 // JWT Authentication
 var rawJwtKey = builder.Configuration["Jwt:Key"];
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(rawJwtKey))
+{
+    throw new InvalidOperationException(
+        "A chave JWT (Jwt:Key) é obrigatória em produção. " +
+        "Defina-a via variável de ambiente ou appsettings.Production.json.");
+}
 var jwtKey = string.IsNullOrWhiteSpace(rawJwtKey)
     ? "DEV_SECRET_KEY_MIN_32_CHARS_LONG_AUTH_TOKEN_TEST"
     : rawJwtKey;

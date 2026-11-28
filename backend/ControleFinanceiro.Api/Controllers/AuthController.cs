@@ -30,7 +30,6 @@ public class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("register")]
     [EnableRateLimiting("register")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)

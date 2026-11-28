@@ -21,10 +21,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restaurar dependências
-        run: dotnet restore backend/ControleFinanceiro.sln
+        run: dotnet restore backend/ControleFinanceiro.slnx
 
       - name: Compilar
-        run: dotnet build backend/ControleFinanceiro.sln --no-restore
+        run: dotnet build backend/ControleFinanceiro.slnx --no-restore
 
       - name: Rodar testes
-        run: dotnet test backend/ControleFinanceiro.sln --no-build --verbosity normal
+        run: dotnet test backend/ControleFinanceiro.slnx --no-build --verbosity normal

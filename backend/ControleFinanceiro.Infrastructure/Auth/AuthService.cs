@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using ControleFinanceiro.Application.DTOs;
 using ControleFinanceiro.Application.Exceptions;
 using ControleFinanceiro.Application.Interfaces;
@@ -11,16 +10,10 @@ namespace ControleFinanceiro.Infrastructure.Auth;
 
 public class AuthService(
     AppDbContext db,
-    IJwtTokenGenerator jwtTokenGenerator,
-    IConfiguration config) : IAuthService
+    IJwtTokenGenerator jwtTokenGenerator) : IAuthService
 {
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
-        if (bool.TryParse(config["Auth:ExigirGoogleNoCadastro"], out var exigir) && exigir)
-        {
-            throw new RegistrationForbiddenException();
-        }
-
         if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
         {
             throw new ValidationException("E-mail inválido.");

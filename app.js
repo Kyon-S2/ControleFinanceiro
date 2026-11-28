@@ -460,14 +460,38 @@ async function confirmarEdicaoGanho() {
 }
 
 // ─── 6. STATS E RENDERIZAÇÃO ──────────────────────────
-function atualizarStats() {
-  const totalGastos  = historico.reduce((s, g) => s + Number(g.valor), 0);
-  const totalGanhos  = historicoGanhos.reduce((s, g) => s + Number(g.valor), 0);
-  const maxVal       = historico.length ? Math.max(...historico.map(g => Number(g.valor))) : 0;
-  const balanco      = totalGanhos - totalGastos;
+async function atualizarStats() {
+  // Calcula totais locais para fallback imediato
+  const totalGastosLocal  = historico.reduce((s, g) => s + Number(g.valor), 0);
+  const totalGanhosLocal  = historicoGanhos.reduce((s, g) => s + Number(g.valor), 0);
+  const maxValLocal       = historico.length ? Math.max(...historico.map(g => Number(g.valor))) : 0;
+
+  // Tenta buscar resumo do mês atual via API (cálculo correto do mês)
+  let totalGastos = totalGastosLocal;
+  let totalGanhos = totalGanhosLocal;
+  let maxVal = maxValLocal;
+  let qtdGastos = historico.length;
+  let statusLimite = 'Ok';
+
+  try {
+    const agora = new Date();
+    const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+    const resumo = await API.get(`/api/resumo?mes=${mesAtual}`);
+    if (resumo) {
+      totalGastos = resumo.totalGastos ?? totalGastosLocal;
+      totalGanhos = resumo.totalGanhos ?? totalGanhosLocal;
+      maxVal      = resumo.maiorGasto  ?? maxValLocal;
+      qtdGastos   = resumo.qtdGastos   ?? historico.length;
+      statusLimite = resumo.statusLimite ?? 'Ok';
+    }
+  } catch {
+    // fallback: usar totais locais (todos os meses)
+  }
+
+  const balanco = totalGanhos - totalGastos;
 
   document.getElementById('stat-total').textContent  = `R$ ${formatVal(totalGastos)}`;
-  document.getElementById('stat-count').textContent  = historico.length;
+  document.getElementById('stat-count').textContent  = qtdGastos;
   document.getElementById('stat-max').textContent    = `R$ ${formatVal(maxVal)}`;
 
   const cardTotal  = document.getElementById('stat-total').parentElement;
@@ -475,7 +499,15 @@ function atualizarStats() {
   if (cardTotal)  cardTotal.classList.remove('alerta-atencao', 'alerta-critico');
   if (cardLimite) cardLimite.classList.remove('alerta-atencao', 'alerta-critico');
 
-  if (limiteMensal > 0) {
+  if (statusLimite === 'Estourado') {
+    if (cardTotal)  cardTotal.classList.add('alerta-critico');
+    if (cardLimite) cardLimite.classList.add('alerta-critico');
+    showToast('⚠️ Limite de gastos excedido!', 'danger');
+  } else if (statusLimite === 'Alerta80') {
+    if (cardTotal)  cardTotal.classList.add('alerta-atencao');
+    if (cardLimite) cardLimite.classList.add('alerta-atencao');
+  } else if (limiteMensal > 0) {
+    // fallback local caso a API não tenha retornado statusLimite
     const p = (totalGastos / limiteMensal) * 100;
     if (p >= 100) {
       if (cardTotal)  cardTotal.classList.add('alerta-critico');
@@ -529,7 +561,7 @@ function renderListaRemover() {
         <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}</div></div>
         <div style="display:flex; align-items:center; gap:14px">
           <span class="val-cell">R$ ${formatVal(Number(g.valor))}</span>
-          <button class="btn-remove" onclick="abrirModal(${g.id}, '${escHtml(g.nome)}')">✕ Remover</button>
+          <button class="btn-remove" onclick="abrirModal(${g.id})">✕ Remover</button>
         </div>
       </div>
     </div>`).join('');
@@ -547,7 +579,7 @@ function renderListaRemoverGanho() {
         <div><div class="report-name">${escHtml(g.nome)}</div><div class="report-meta">${escHtml(g.classe)} · ${escHtml(g.data)}${g.fixo ? ' · Fixo' : ''}</div></div>
         <div style="display:flex; align-items:center; gap:14px">
           <span class="val-cell val-ganho">R$ ${formatVal(Number(g.valor))}</span>
-          <button class="btn-remove" onclick="abrirModalGanho(${g.id}, '${escHtml(g.nome)}')">✕ Remover</button>
+          <button class="btn-remove" onclick="abrirModalGanho(${g.id})">✕ Remover</button>
         </div>
       </div>
     </div>`).join('');
@@ -603,15 +635,19 @@ function showView(view, btn) {
   if (view === 'relatorio')     renderRelatorio();
 }
 
-function abrirModal(id, nome) {
+function abrirModal(id) {
+  const g = historico.find(x => x && x.id === id);
+  if (!g) return;
   idRemover = id;
-  document.getElementById('modal-nome').textContent = nome;
+  document.getElementById('modal-nome').textContent = g.nome;
   document.getElementById('modal-overlay').classList.add('open');
 }
 
-function abrirModalGanho(id, nome) {
+function abrirModalGanho(id) {
+  const g = historicoGanhos.find(x => x && x.id === id);
+  if (!g) return;
   idRemoverGanho = id;
-  document.getElementById('modal-nome').textContent = nome;
+  document.getElementById('modal-nome').textContent = g.nome;
   const overlay = document.getElementById('modal-overlay');
   overlay.classList.add('open');
   overlay.dataset.tipo = 'ganho';
@@ -698,74 +734,14 @@ async function salvarLimiteMensal() {
   }
 }
 
-// ─── 9. GOOGLE AUTH (GSI) ─────────────────────────────
-function inicializarGoogleAuth() {
-  if (!window.google || typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) return;
-
-  try {
-    google.accounts.id.initialize({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      callback: handleGoogleCredentialResponse,
-    });
-
-    const btnLogin = document.getElementById('google-btn-login');
-    if (btnLogin) {
-      google.accounts.id.renderButton(btnLogin, {
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        width: 280,
-      });
-    }
-
-    const btnReg = document.getElementById('google-btn-reg');
-    if (btnReg) {
-      google.accounts.id.renderButton(btnReg, {
-        theme: 'outline',
-        size: 'large',
-        text: 'signup_with',
-        shape: 'rectangular',
-        width: 280,
-      });
-    }
-  } catch (e) {
-    console.warn('Google Identity Services não inicializado:', e);
-  }
-}
-
-async function handleGoogleCredentialResponse(response) {
-  if (!response || !response.credential) return;
-
-  setBloqueadoAuth(true);
-  try {
-    const dados = await API.post('/api/auth/google', { idToken: response.credential });
-    API.setToken(dados.token);
-
-    let email = 'Google User';
-    try {
-      const payload = JSON.parse(atob(dados.token.split('.')[1]));
-      if (payload.email) email = payload.email;
-    } catch {}
-
-    API.setEmail(email);
-    await entrarNoApp(email);
-  } catch (err) {
-    setError('err-login-geral', err.message || 'Erro ao autenticar com Google.');
-    setError('err-reg-geral', err.message || 'Erro ao autenticar com Google.');
-  } finally {
-    setBloqueadoAuth(false);
-  }
-}
-
-// ─── 10. UTILITÁRIOS ──────────────────────────────────
+// ─── 9. UTILITÁRIOS ──────────────────────────────────
 function validarNome(v)   { return (!v || v.trim().length === 0) ? 'Informe um nome.' : (/^\d+$/.test(v.trim()) ? 'Apenas números não é válido.' : ''); }
 function validarValor(v)  { const n = parseFloat(v); return (isNaN(n) || n <= 0) ? 'Valor inválido.' : ''; }
 function validarClasse(v) { return (!v || String(v).trim().length === 0) ? 'Informe a categoria.' : ''; }
 function validarData(v)   { return !v ? 'Selecione a data.' : ''; }
 function setError(id, msg){ const el = document.getElementById(id); if (el) el.textContent = msg; }
 function formatVal(n)     { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function escHtml(s)       { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escHtml(s)       { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 function setBloqueadoFormulario(e) {
   const b = document.querySelectorAll('#view-cadastro .btn-primary, #view-cadastro-ganho .btn-primary, #modal-overlay button');
@@ -794,7 +770,7 @@ function showToast(msg, type = '') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ─── 11. INICIALIZAÇÃO ────────────────────────────────
+// ─── 10. INICIALIZAÇÃO ────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   const token = API.getToken();
   const email = API.getEmail();
@@ -805,8 +781,4 @@ window.addEventListener('DOMContentLoaded', async () => {
       fazerLogout();
     }
   }
-});
-
-window.addEventListener('load', () => {
-  setTimeout(inicializarGoogleAuth, 400);
 });

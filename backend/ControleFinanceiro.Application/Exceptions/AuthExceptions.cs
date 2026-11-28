@@ -15,4 +15,3 @@ public class NotFoundException(string message = "Recurso não encontrado.") : Na
 public class ValidationException(string message) : ValidacaoException(message);
 public class EmailAlreadyRegisteredException(string message = "E-mail já cadastrado.") : ConflitoException(message);
 public class InvalidCredentialsException(string message = "credenciais inválidas") : CredenciaisInvalidasException(message);
-public class RegistrationForbiddenException(string message = "Cadastro permitido apenas via Google.") : ProibidoException(message);

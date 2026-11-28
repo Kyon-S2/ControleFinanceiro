@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="filters.css" />
   <link rel="icon" type="image/png" href="favicon.ico" />
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     .auth-form { display: none !important; }
     .auth-form.active { display: block !important; }
@@ -72,8 +71,6 @@
         </div>
         <div class="error-msg auth-error" id="err-login-geral"></div>
         <button class="btn-auth" onclick="fazerLogin()">⬡ &nbsp; Entrar</button>
-        <div class="google-auth-separator"><span>OU</span></div>
-        <div id="google-btn-login" class="google-btn-container"></div>
       </div>
       <div id="form-cadastro-conta" class="auth-form">
         <div class="form-group">
@@ -93,8 +90,6 @@
         </div>
         <div class="error-msg auth-error" id="err-reg-geral"></div>
         <button class="btn-auth" onclick="fazerCadastro()">⬡ &nbsp; Criar Conta</button>
-        <div class="google-auth-separator"><span>OU</span></div>
-        <div id="google-btn-reg" class="google-btn-container"></div>
       </div>
     </div>
   </div>
@@ -114,7 +109,7 @@
     <!-- STATS -->
     <div class="stats-bar">
       <div class="stat-card">
-        <div class="stat-label">Total Acumulado</div>
+        <div class="stat-label">Total do Mês</div>
         <div class="stat-value" id="stat-total">R$ 0,00</div>
       </div>
       <div class="stat-card">
